@@ -1,0 +1,42 @@
+name: Build and Release HNC10
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential cmake pkg-config git \
+          libssl-dev libcjson-dev libpaho-mqttpp3-dev libpaho-mqtt3a-dev wiringpi
+
+    - name: Build and install CppLinuxSerial
+      run: |
+        git clone https://github.com/cpp-linux/CppLinuxSerial.git
+        cd CppLinuxSerial
+        mkdir build && cd build
+        cmake ..
+        make -j$(nproc)
+        sudo make install
+        cd ../..
+
+    - name: Configure and build
+      run: |
+        cmake -S . -B build
+        cmake --build build --config Release -- -j$(nproc)
+
+    - name: Upload release asset
+      uses: softprops/action-gh-release@v1
+      with:
+        files: build/HNC10
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
